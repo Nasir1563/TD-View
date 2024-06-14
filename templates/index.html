@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="/">Dashboard</a> | <a href="/calendar">Calendar</a>
+    </nav>
+    <h1>Dashboard</h1>
+    <div id="metrics"></div>
+    <h2>Graphs</h2>
+    <canvas id="profitChart"></canvas>
+    <canvas id="winLossChart"></canvas>
+    <canvas id="tradeTypeChart"></canvas>
+    <h2>Last Five Trades</h2>
+    <ul id="lastFiveTrades"></ul>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        fetch('/api/trades')
+            .then(response => response.json())
+            .then(data => {
+                calculateMetrics(data);
+                renderCharts(data);
+                const lastFiveTrades = data.slice(0, 5).map(trade => `<li>Trade ID: ${trade.id}, Profit: ${trade.profit}</li>`).join('');
+                document.getElementById('lastFiveTrades').innerHTML = lastFiveTrades;
+            });
+
+        function calculateMetrics(data) {
+            fetch('/api/metrics')
+                .then(response => response.json())
+                .then(metrics => {
+                    document.getElementById('metrics').innerHTML = `
+                        <div>Total Net Profit: ${metrics.total_net_profit}</div>
+                        <div>Gross Profit: ${metrics.gross_profit}</div>
+                        <div>Gross Loss: ${metrics.gross_loss}</div>
+                        <div>Profit Factor: ${metrics.profit_factor}</div>
+                        <div>Expected Payoff: ${metrics.expected_payoff}</div>
+                        <div>Recovery Factor: ${metrics.recovery_factor}</div>
+                        <div>Sharpe Ratio: ${metrics.sharpe_ratio}</div>
+                        <div>Balance Drawdown: ${metrics.balance_drawdown}</div>
+                        <div>Total Trades: ${metrics.total_trades}</div>
+                        <div>Short Trades (won %): ${metrics.short_trades} (${metrics.short_trades_won_percentage.toFixed(2)}%)</div>
+                        <div>Long Trades (won %): ${metrics.long_trades} (${metrics.long_trades_won_percentage.toFixed(2)}%)</div>
+                        <div>Profit Trades (% of total): ${metrics.profit_trades_percentage.toFixed(2)}%</div>
+                        <div>Loss Trades (% of total): ${metrics.loss_trades_percentage.toFixed(2)}%</div>
+                        <div>Largest Profit Trade: ${metrics.largest_profit_trade}</div>
+                        <div>Largest Loss Trade: ${metrics.largest_loss_trade}</div>
+                        <div>Average Profit Trade: ${metrics.average_profit_trade}</div>
+                        <div>Average Loss Trade: ${metrics.average_loss_trade}</div>
+                        <div>Max Consecutive Wins: ${metrics.max_consecutive_wins}</div>
+                        <div>Max Consecutive Losses: ${metrics.max_consecutive_losses}</div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error fetching metrics:', error);
+                    document.getElementById('metrics').innerHTML = '<div>Error fetching metrics</div>';
+                });
+        }
+
+        function renderCharts(data) {
+            const profitData = data.map(trade => trade.profit);
+            const labels = data.map(trade => new Date(trade.time).toLocaleDateString());
+
+            // Profit Chart
+            const profitCtx = document.getElementById('profitChart').getContext('2d');
+            new Chart(profitCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit Over Time',
+                        data: profitData,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        fill: false
+                    }]
+                }
+            });
+
+            // Win/Loss Chart
+            const winLossData = {
+                labels: ['Wins', 'Losses'],
+                datasets: [{
+                    label: 'Win/Loss Ratio',
+                    data: [
+                        data.filter(trade => trade.profit > 0).length,
+                        data.filter(trade => trade.profit <= 0).length
+                    ],
+                    backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 99, 132, 0.2)'],
+                    borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)'],
+                    borderWidth: 1
+                }]
+            };
+
+            const winLossCtx = document.getElementById('winLossChart').getContext('2d');
+            new Chart(winLossCtx, {
+                type: 'pie',
+                data: winLossData
+            });
+
+            // Trade Type Chart
+            const tradeTypeData = {
+                labels: ['Short Trades (SELL)', 'Long Trades (BUY)'],
+                datasets: [{
+                    label: 'Trade Types',
+                    data: [
+                        data.filter(trade => trade.type === 'short').length,
+                        data.filter(trade => trade.type === 'long').length
+                    ],
+                    backgroundColor: ['rgba(153, 102, 255, 0.2)', 'rgba(255, 159, 64, 0.2)'],
+                    borderColor: ['rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)'],
+                    borderWidth: 1
+                }]
+            };
+
+            const tradeTypeCtx = document.getElementById('tradeTypeChart').getContext('2d');
+            new Chart(tradeTypeCtx, {
+                type: 'bar',
+                data: tradeTypeData
+            });
+        }
+    </script>
+</body>
+</html>

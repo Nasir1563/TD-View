@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav>
+        <a href="/">Dashboard</a> | <a href="/calendar">Calendar</a>
+    </nav>
+    <h1>Trade Details by Date</h1>
+    <div id="calendar"></div>
+    <div id="tradeDetails">
+        <h2>Trades for <span id="selectedDate"></span></h2>
+        <ul id="tradeList"></ul>
+    </div>
+    <script>
+        // Create a date input element
+        const calendar = document.createElement('input');
+        calendar.type = 'date';
+
+        // Set an event listener for date changes
+        calendar.onchange = (event) => {
+            const selectedDate = event.target.value;
+            document.getElementById('selectedDate').innerText = selectedDate;
+            
+            // Fetch trade details for the selected date
+            fetch(`/api/trades/${selectedDate}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tradeList = data.map(trade => `
+                        <li>
+                            <strong>Trade ID:</strong> ${trade.id}, 
+                            <strong>Symbol:</strong> ${trade.symbol}, 
+                            <strong>Type:</strong> ${trade.type}, 
+                            <strong>Volume:</strong> ${trade.volume}, 
+                            <strong>Profit:</strong> ${trade.profit}
+                        </li>
+                    `).join('');
+                    document.getElementById('tradeList').innerHTML = tradeList;
+                })
+                .catch(error => {
+                    console.error('Error fetching trade details:', error);
+                    document.getElementById('tradeList').innerHTML = '<li>Error fetching trade details</li>';
+                });
+        };
+
+        // Append the date input to the calendar div
+        document.getElementById('calendar').appendChild(calendar);
+    </script>
+</body>
+</html>

@@ -1,3 +1,4 @@
-Flask==2.1.1
-supabase==0.1.7
-requests==2.27.1
+Flask==2.0.1
+gunicorn==20.1.0
+supabase==2.5.1
+numpy
